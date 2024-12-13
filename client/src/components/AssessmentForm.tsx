@@ -3,11 +3,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Practice, Assessment } from "@/types/assessment";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { HelpCircle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { updateAssessment } from "@/lib/api";
 
 const assessmentSchema = z.object({
@@ -55,7 +62,20 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{practice.practiceId} - {practice.name}</CardTitle>
+        <div className="flex items-center space-x-2">
+          <CardTitle>{practice.practiceId} - {practice.name}</CardTitle>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <HelpCircle className="h-5 w-5 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-sm">
+                <p>Provide detailed evidence of how your organization implements this practice. Include specific examples, configurations, and documentation references.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <CardDescription className="mt-2">{practice.description}</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -73,8 +93,28 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    {practice.assessment}
+                  <FormDescription className="space-y-4">
+                    <div className="text-sm">
+                      <p className="font-medium mb-2">Assessment Guidance:</p>
+                      <p>{practice.assessment}</p>
+                    </div>
+                    <div className="text-sm">
+                      <p className="font-medium mb-2">Assessment Methods:</p>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>EXAMINE organizational policies and procedures</li>
+                        <li>INTERVIEW personnel responsible for implementing controls</li>
+                        <li>TEST implemented controls and mechanisms</li>
+                      </ul>
+                    </div>
+                    <div className="text-sm">
+                      <p className="font-medium mb-2">Evidence Examples:</p>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>Screenshots of implemented controls</li>
+                        <li>System configuration documentation</li>
+                        <li>Relevant policies and procedures</li>
+                        <li>Access control lists or logs</li>
+                      </ul>
+                    </div>
                   </FormDescription>
                 </FormItem>
               )}
