@@ -49,15 +49,20 @@ app.use((req, res, next) => {
 
   const PORT = 5000;
   
-  // Always use Vite in development
-  if (process.env.NODE_ENV !== "production") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+  try {
+    // Always use Vite in development
+    if (process.env.NODE_ENV !== "production") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
 
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`Server running at http://0.0.0.0:${PORT}`);
-    log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  });
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`Server running at http://0.0.0.0:${PORT}`);
+      log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (error) {
+    log(`Server failed to start: ${error}`);
+    process.exit(1);
+  }
 })();
