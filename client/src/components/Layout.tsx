@@ -7,7 +7,7 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const [location] = useLocation();
+  const [location] = useLocation() || ['/'];
 
   return (
     <div className="min-h-screen bg-background">
@@ -20,25 +20,25 @@ export default function Layout({ children }: LayoutProps) {
             </div>
             <div className="flex space-x-4">
               <Link href="/">
-                <a className={`flex items-center px-3 py-2 rounded-md text-sm font-medium
+                <div className={`flex items-center px-3 py-2 rounded-md text-sm font-medium cursor-pointer
                   ${location === '/' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-accent'}`}>
                   <Home className="h-4 w-4 mr-2" />
                   Home
-                </a>
+                </div>
               </Link>
               <Link href="/assessment">
-                <a className={`flex items-center px-3 py-2 rounded-md text-sm font-medium
+                <div className={`flex items-center px-3 py-2 rounded-md text-sm font-medium cursor-pointer
                   ${location === '/assessment' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-accent'}`}>
                   <Shield className="h-4 w-4 mr-2" />
                   Assessment
-                </a>
+                </div>
               </Link>
               <Link href="/reports">
-                <a className={`flex items-center px-3 py-2 rounded-md text-sm font-medium
+                <div className={`flex items-center px-3 py-2 rounded-md text-sm font-medium cursor-pointer
                   ${location === '/reports' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-accent'}`}>
                   <FileText className="h-4 w-4 mr-2" />
                   Reports
-                </a>
+                </div>
               </Link>
             </div>
           </div>
