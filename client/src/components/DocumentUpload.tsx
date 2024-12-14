@@ -82,7 +82,7 @@ export function DocumentUpload({
       const oversizedFiles = fileArray.filter(file => file.size > MAX_FILE_SIZE);
       if (oversizedFiles.length > 0) {
         throw new Error(
-          `The following files exceed the 2GB limit: ${oversizedFiles
+          `The following files exceed the 5GB limit: ${oversizedFiles
             .map(f => f.name)
             .join(", ")}`
         );

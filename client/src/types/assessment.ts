@@ -26,9 +26,12 @@ export interface Document {
   id: number;
   assessmentId: number;
   filename: string;
-  data: string;
+  totalSize: number;
+  uploadedChunks: number;
+  totalChunks: number;
+  status: 'pending' | 'complete' | 'failed';
   createdAt: string;
-  updatedAt?: string;
+  updatedAt: string;
 }
 
 

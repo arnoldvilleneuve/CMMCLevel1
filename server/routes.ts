@@ -241,12 +241,15 @@ export function registerRoutes(app: Express): Server {
           id: documents.id,
           assessmentId: documents.assessmentId,
           filename: documents.filename,
+          totalSize: documents.totalSize,
+          uploadedChunks: documents.uploadedChunks,
+          totalChunks: documents.totalChunks,
+          status: documents.status,
           createdAt: documents.createdAt,
-          data: documents.data
+          updatedAt: documents.updatedAt
         })
         .from(documents)
         .where(eq(documents.assessmentId, parseInt(id)))
-        .orderBy(documents.createdAt)
         .execute();
       
       res.json(docs);

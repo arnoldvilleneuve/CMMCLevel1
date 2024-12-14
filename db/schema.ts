@@ -29,7 +29,7 @@ export const documentChunks = pgTable("document_chunks", {
   id: serial("id").primaryKey(),
   documentId: integer("document_id").notNull(),
   chunkIndex: integer("chunk_index").notNull(),
-  data: text("data").notNull(),
+  data: text("data"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
