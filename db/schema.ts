@@ -25,6 +25,17 @@ export const reports = pgTable("reports", {
   data: jsonb("data").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
+export const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
+  assessmentId: integer("assessment_id").notNull(),
+  filename: text("filename").notNull(),
+  data: text("data").notNull(), // Base64 encoded file data
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertDocumentSchema = createInsertSchema(documents);
+export const selectDocumentSchema = createSelectSchema(documents);
+
 
 export const insertPracticeSchema = createInsertSchema(practices);
 export const selectPracticeSchema = createSelectSchema(practices);

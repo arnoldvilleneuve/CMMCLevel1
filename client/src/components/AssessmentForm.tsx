@@ -1,21 +1,19 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Practice, Assessment } from "@/types/assessment";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { HelpCircle } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { updateAssessment } from "@/lib/api";
+import { updateAssessment, uploadDocument, getDocuments } from "@/lib/api";
+import type { Practice, Assessment, Document } from "@/types/assessment";
 
 const assessmentSchema = z.object({
   evidence: z.string().min(1, "Evidence is required"),
@@ -30,6 +28,13 @@ interface AssessmentFormProps {
 
 export default function AssessmentForm({ practice, currentAssessment, onSave }: AssessmentFormProps) {
   const { toast } = useToast();
+  const [isUploading, setIsUploading] = useState(false);
+
+  const { data: documents } = useQuery({
+    queryKey: ['/api/documents', currentAssessment?.id],
+    queryFn: () => currentAssessment?.id ? getDocuments(currentAssessment.id) : Promise.resolve([]),
+    enabled: !!currentAssessment?.id
+  });
 
   const form = useForm<z.infer<typeof assessmentSchema>>({
     resolver: zodResolver(assessmentSchema),
@@ -145,7 +150,70 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
               )}
             />
 
-            <Button type="submit">Save Assessment</Button>
+            <div className="space-y-4">
+              <div>
+                <label 
+                  htmlFor={`file-upload-${practice.id}`}
+                  className="block text-sm font-medium mb-2"
+                >
+                  Upload Evidence Documents
+                </label>
+                <input
+                  id={`file-upload-${practice.id}`}
+                  type="file"
+                  className="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-primary file:text-primary-foreground
+                    hover:file:bg-primary/90"
+                  disabled={isUploading}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file && currentAssessment?.id) {
+                      try {
+                        setIsUploading(true);
+                        await uploadDocument(currentAssessment.id, file);
+                        toast({
+                          title: "Document uploaded",
+                          description: "Your evidence document has been uploaded successfully."
+                        });
+                        onSave();
+                      } catch (error) {
+                        toast({
+                          title: "Error",
+                          description: "Failed to upload document.",
+                          variant: "destructive"
+                        });
+                      } finally {
+                        setIsUploading(false);
+                      }
+                    }
+                  }}
+                />
+              </div>
+              
+              {currentAssessment?.id && documents && documents.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Uploaded Documents</h4>
+                  <div className="space-y-2">
+                    {documents.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between p-2 border rounded-md"
+                      >
+                        <span className="text-sm">{doc.filename}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(doc.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Button type="submit">Save Assessment</Button>
+            </div>
           </form>
         </Form>
       </CardContent>

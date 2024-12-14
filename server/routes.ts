@@ -65,6 +65,45 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: 'Failed to generate report' });
     }
   });
+  app.post('/api/assessments/:id/documents', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { filename, data } = req.body;
+      
+      const result = await db
+        .insert(documents)
+        .values({
+          assessmentId: parseInt(id),
+          filename,
+          data
+        })
+        .returning();
+      
+      res.json(result[0]);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to upload document' });
+    }
+  });
+
+  app.get('/api/assessments/:id/documents', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const docs = await db
+        .select()
+        .from(documents)
+        .where(eq(documents.assessmentId, parseInt(id)));
+      
+      res.json(docs.map(doc => ({
+        id: doc.id,
+        assessmentId: doc.assessmentId,
+        filename: doc.filename,
+        createdAt: doc.createdAt
+      })));
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch documents' });
+    }
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;

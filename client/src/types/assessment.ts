@@ -22,6 +22,14 @@ export interface Report {
   data: any;
   createdAt: string;
 }
+export interface Document {
+  id: number;
+  assessmentId: number;
+  filename: string;
+  data: string;
+  createdAt: string;
+}
+
 
 export interface Domain {
   name: string;
