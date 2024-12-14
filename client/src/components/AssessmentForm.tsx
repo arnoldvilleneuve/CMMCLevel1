@@ -155,8 +155,8 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
             />
 
             <div className="space-y-4">
-              {currentAssessment?.id && (
-                <div className="border-t pt-4">
+              <div className="border-t pt-4">
+                {currentAssessment ? (
                   <DocumentUpload
                     assessmentId={currentAssessment.id}
                     documents={documents}
@@ -167,8 +167,12 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
                       });
                     }}
                   />
-                </div>
-              )}
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    Save the assessment first to enable document uploads
+                  </div>
+                )}
+              </div>
               <div className="flex justify-end">
                 <Button type="submit">Save Assessment</Button>
               </div>
