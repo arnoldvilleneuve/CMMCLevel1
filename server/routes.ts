@@ -5,9 +5,13 @@ import { practices, assessments, reports, documents } from "@db/schema";
 import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
-  // Configure middleware for handling file uploads with proper limits
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  // Configure middleware for handling large file uploads
+  app.use(express.json({ limit: '100kb' })); // Keep JSON payload small
+  app.use(express.raw({ 
+    type: 'application/octet-stream',
+    limit: '2gb' // Allow large raw uploads for chunked data
+  }));
+  app.use(express.urlencoded({ extended: true, limit: '100kb' }));
   
   // Add specific error handling for large files
   app.use((err: any, req: any, res: any, next: any) => {
@@ -111,16 +115,16 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: 'Failed to generate report' });
     }
   });
-  app.post('/api/assessments/:id/documents', async (req, res) => {
+  // Initialize chunked upload
+  app.post('/api/assessments/:id/documents/init', async (req, res) => {
     try {
       const { id } = req.params;
-      const { filename, data } = req.body;
+      const { filename, totalSize, totalChunks } = req.body;
       
-      if (!filename || !data) {
+      if (!filename || !totalSize || !totalChunks) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      // Validate assessment exists
       const assessment = await db
         .select()
         .from(assessments)
@@ -131,28 +135,70 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: 'Assessment not found' });
       }
 
-      // Insert new document
       const result = await db
         .insert(documents)
         .values({
           assessmentId: parseInt(id),
           filename,
-          data
+          totalSize,
+          totalChunks,
+          uploadedChunks: 0,
+          status: 'pending'
         })
         .returning()
         .execute();
       
-      const doc = result[0];
-      res.json({
-        id: doc.id,
-        assessmentId: doc.assessmentId,
-        filename: doc.filename,
-        data: doc.data,
-        createdAt: doc.createdAt
-      });
+      res.json(result[0]);
     } catch (error) {
-      console.error('Document upload error:', error);
-      res.status(500).json({ error: 'Failed to upload document' });
+      console.error('Document initialization error:', error);
+      res.status(500).json({ error: 'Failed to initialize document upload' });
+    }
+  });
+
+  // Upload chunk
+  app.post('/api/assessments/:assessmentId/documents/:documentId/chunks/:chunkIndex', async (req, res) => {
+    try {
+      const { assessmentId, documentId, chunkIndex } = req.params;
+      
+      if (!req.is('application/octet-stream')) {
+        return res.status(400).json({ error: 'Invalid content type' });
+      }
+
+      const doc = await db
+        .select()
+        .from(documents)
+        .where(eq(documents.id, parseInt(documentId)))
+        .execute();
+
+      if (!doc.length) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
+
+      // Store chunk
+      await db.insert(documentChunks)
+        .values({
+          documentId: parseInt(documentId),
+          chunkIndex: parseInt(chunkIndex),
+          data: req.body.toString('base64')
+        })
+        .execute();
+
+      // Update document progress
+      const updatedDoc = await db
+        .update(documents)
+        .set({
+          uploadedChunks: doc[0].uploadedChunks + 1,
+          status: doc[0].uploadedChunks + 1 === doc[0].totalChunks ? 'complete' : 'pending',
+          updatedAt: new Date()
+        })
+        .where(eq(documents.id, parseInt(documentId)))
+        .returning()
+        .execute();
+
+      res.json(updatedDoc[0]);
+    } catch (error) {
+      console.error('Chunk upload error:', error);
+      res.status(500).json({ error: 'Failed to upload chunk' });
     }
   });
 

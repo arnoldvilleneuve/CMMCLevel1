@@ -29,6 +29,45 @@ export function DocumentUpload({
   
   const isUploading = Object.keys(uploadingFiles).length > 0;
 
+  const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+
+  const uploadFileInChunks = async (file: File, documentId: number) => {
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const start = chunkIndex * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+      
+      try {
+        const response = await fetch(
+          `/api/assessments/${assessmentId}/documents/${documentId}/chunks/${chunkIndex}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/octet-stream'
+            },
+            body: chunk
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`Failed to upload chunk ${chunkIndex}`);
+        }
+        
+        // Update progress
+        const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+        setUploadingFiles(prev => ({
+          ...prev,
+          [file.name]: progress
+        }));
+        
+      } catch (error) {
+        throw new Error(`Failed to upload chunk ${chunkIndex}: ${error.message}`);
+      }
+    }
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -37,15 +76,15 @@ export function DocumentUpload({
 
     try {
       const fileArray = Array.from(files);
+      const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB limit
       
-      // Validate file sizes (50MB limit)
-      const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+      // Validate file sizes
       const oversizedFiles = fileArray.filter(file => file.size > MAX_FILE_SIZE);
       if (oversizedFiles.length > 0) {
         throw new Error(
-          `The following files exceed the 50MB limit: ${oversizedFiles
+          `The following files exceed the 2GB limit: ${oversizedFiles
             .map(f => f.name)
-            .join(", ")}. Maximum file size is 50MB.`
+            .join(", ")}`
         );
       }
 
@@ -57,22 +96,27 @@ export function DocumentUpload({
             [file.name]: 0
           }));
 
-          // Simulate upload progress
-          const progressInterval = setInterval(() => {
-            setUploadingFiles(prev => ({
-              ...prev,
-              [file.name]: Math.min((prev[file.name] || 0) + 5, 90)
-            }));
-          }, 100);
+          // Initialize upload
+          const response = await fetch(`/api/assessments/${assessmentId}/documents/init`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              filename: file.name,
+              totalSize: file.size,
+              totalChunks: Math.ceil(file.size / CHUNK_SIZE)
+            })
+          });
 
-          await uploadDocument(assessmentId, file);
+          if (!response.ok) {
+            throw new Error('Failed to initialize upload');
+          }
+
+          const document = await response.json();
           
-          clearInterval(progressInterval);
-          
-          setUploadingFiles(prev => ({
-            ...prev,
-            [file.name]: 100
-          }));
+          // Upload chunks
+          await uploadFileInChunks(file, document.id);
 
           toast({
             title: "Success",
@@ -90,7 +134,7 @@ export function DocumentUpload({
 
         } catch (error) {
           console.error('Upload error for file:', file.name, error);
-          setError(`Failed to upload ${file.name}: ${error.message}`);
+          setError(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
           
           setUploadingFiles(prev => {
             const newState = { ...prev };

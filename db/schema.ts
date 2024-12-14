@@ -25,12 +25,24 @@ export const reports = pgTable("reports", {
   data: jsonb("data").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
+export const documentChunks = pgTable("document_chunks", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull(),
+  chunkIndex: integer("chunk_index").notNull(),
+  data: text("data").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
   assessmentId: integer("assessment_id").notNull(),
   filename: text("filename").notNull(),
-  data: text("data").notNull(), // Base64 encoded file data
+  totalSize: integer("total_size").notNull(),
+  totalChunks: integer("total_chunks").notNull(),
+  uploadedChunks: integer("uploaded_chunks").notNull().default(0),
+  status: text("status").notNull().default('pending'), // pending, complete, failed
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertDocumentSchema = createInsertSchema(documents);
