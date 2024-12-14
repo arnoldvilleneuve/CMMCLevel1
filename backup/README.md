@@ -138,12 +138,14 @@ If you encounter issues during restoration:
    # Clear npm cache and reinstall
 ## Importing to New Replit Environment
 
-### 1. Create New Replit Project
-1. Go to replit.com and click "Create Repl"
-2. Choose "Import from GitHub"
-3. Paste your GitHub repository URL
-4. Select "TypeScript" as the language
-5. Click "Import from GitHub"
+### 1. Setting up GitHub Integration
+1. Click the "Tools" button in the top menu bar (wrench icon)
+2. Select "Git" from the dropdown menu
+3. Click "Connect to GitHub" and follow the authorization process
+4. Login to your GitHub account if prompted
+5. Authorize Replit by reviewing and accepting the permissions
+6. After authorization, choose to create a new repository or link to an existing one
+7. Once connected, you can push your code to GitHub
 
 ### 2. Setup Environment
 1. Add all required secrets from backup/environment.json
