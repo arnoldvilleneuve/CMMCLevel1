@@ -70,6 +70,7 @@ export function registerRoutes(app: Express): Server {
       const { id } = req.params;
       const { filename, data } = req.body;
       
+      // Insert new document while preserving existing ones
       const result = await db
         .insert(documents)
         .values({
@@ -79,8 +80,16 @@ export function registerRoutes(app: Express): Server {
         })
         .returning();
       
-      res.json(result[0]);
+      // Return only necessary document info
+      const doc = result[0];
+      res.json({
+        id: doc.id,
+        assessmentId: doc.assessmentId,
+        filename: doc.filename,
+        createdAt: doc.createdAt
+      });
     } catch (error) {
+      console.error('Document upload error:', error);
       res.status(500).json({ error: 'Failed to upload document' });
     }
   });
@@ -88,18 +97,22 @@ export function registerRoutes(app: Express): Server {
   app.get('/api/assessments/:id/documents', async (req, res) => {
     try {
       const { id } = req.params;
-      const docs = await db
-        .select()
-        .from(documents)
-        .where(eq(documents.assessmentId, parseInt(id)));
       
-      res.json(docs.map(doc => ({
-        id: doc.id,
-        assessmentId: doc.assessmentId,
-        filename: doc.filename,
-        createdAt: doc.createdAt
-      })));
+      // Fetch all documents for this assessment
+      const docs = await db
+        .select({
+          id: documents.id,
+          assessmentId: documents.assessmentId,
+          filename: documents.filename,
+          createdAt: documents.createdAt
+        })
+        .from(documents)
+        .where(eq(documents.assessmentId, parseInt(id)))
+        .orderBy(documents.createdAt);
+      
+      res.json(docs);
     } catch (error) {
+      console.error('Document fetch error:', error);
       res.status(500).json({ error: 'Failed to fetch documents' });
     }
   });

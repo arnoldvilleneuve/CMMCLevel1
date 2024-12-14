@@ -31,8 +31,8 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
   const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
 
-  const { data: documents } = useQuery({
-    queryKey: ['/api/documents', currentAssessment?.id],
+  const { data: documents = [], isLoading: isLoadingDocuments } = useQuery({
+    queryKey: ['documents', currentAssessment?.id],
     queryFn: () => currentAssessment?.id ? getDocuments(currentAssessment.id) : Promise.resolve([]),
     enabled: !!currentAssessment?.id
   });
@@ -153,71 +153,95 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
 
             <div className="space-y-4">
               <div>
-                <label 
+                <label
                   htmlFor={`file-upload-${practice.id}`}
                   className="block text-sm font-medium mb-2"
                 >
                   Upload Evidence Document
                 </label>
                 <div className="space-y-4">
-                  <input
-                    id={`file-upload-${practice.id}`}
-                    type="file"
-                    className="block w-full text-sm text-gray-500
-                      file:mr-4 file:py-2 file:px-4
-                      file:rounded-md file:border-0
-                      file:text-sm file:font-semibold
-                      file:bg-primary file:text-primary-foreground
-                      hover:file:bg-primary/90"
-                    disabled={isUploading}
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (file && currentAssessment?.id) {
-                        try {
-                          setIsUploading(true);
-                          await uploadDocument(currentAssessment.id, file);
-                          toast({
-                            title: "Document uploaded",
-                            description: `Successfully uploaded ${file.name}`
-                          });
-                          // Invalidate and refetch documents query
-                          await queryClient.invalidateQueries(['/api/documents', currentAssessment.id]);
-                        } catch (error) {
-                          toast({
-                            title: "Error",
-                            description: "Failed to upload the document.",
-                            variant: "destructive"
-                          });
-                        } finally {
-                          setIsUploading(false);
-                          // Reset the file input
-                          e.target.value = '';
+                  <div className="flex items-center gap-4">
+                    <input
+                      id={`file-upload-${practice.id}`}
+                      type="file"
+                      className="block flex-1 text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-md file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-primary file:text-primary-foreground
+                        hover:file:bg-primary/90"
+                      disabled={isUploading}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file && currentAssessment?.id) {
+                          try {
+                            setIsUploading(true);
+                            await uploadDocument(currentAssessment.id, file);
+                            toast({
+                              title: "Success",
+                              description: `Successfully uploaded ${file.name}`
+                            });
+                            // Invalidate and refetch documents query
+                            await queryClient.invalidateQueries({
+                              queryKey: ['documents', currentAssessment.id]
+                            });
+                          } catch (error) {
+                            console.error('Upload error:', error);
+                            toast({
+                              title: "Error",
+                              description: "Failed to upload the document.",
+                              variant: "destructive"
+                            });
+                          } finally {
+                            setIsUploading(false);
+                            // Reset the file input
+                            e.target.value = '';
+                          }
                         }
-                      }
-                    }}
-                  />
+                      }}
+                    />
+                    {isUploading && (
+                      <div className="text-sm text-muted-foreground animate-pulse">
+                        Uploading...
+                      </div>
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    Upload additional evidence documents one at a time. All uploaded documents will be preserved.
+                    Upload evidence documents one at a time. All uploaded documents are preserved.
                   </p>
                 </div>
               </div>
-              
-              {currentAssessment?.id && documents && documents.length > 0 && (
+
+              {currentAssessment?.id && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Uploaded Documents</h4>
-                  <div className="space-y-2">
-                    {documents.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between p-2 border rounded-md"
-                      >
-                        <span className="text-sm">{doc.filename}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(doc.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium">Uploaded Documents</h4>
+                    {isLoadingDocuments && (
+                      <span className="text-sm text-muted-foreground animate-pulse">
+                        Loading...
+                      </span>
+                    )}
                   </div>
+
+                  {documents.length > 0 ? (
+                    <div className="space-y-2">
+                      {documents.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between p-2 border rounded-md hover:bg-accent/50 transition-colors"
+                        >
+                          <span className="text-sm font-medium">{doc.filename}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(doc.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No documents uploaded yet.
+                    </p>
+                  )}
                 </div>
               )}
 
