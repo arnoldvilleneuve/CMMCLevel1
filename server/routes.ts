@@ -163,6 +163,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: 'Assessment not found' });
       }
 
+      // Initialize document with proper validation
       const result = await db
         .insert(documents)
         .values({
@@ -171,7 +172,9 @@ export function registerRoutes(app: Express): Server {
           totalSize,
           totalChunks,
           uploadedChunks: 0,
-          status: 'pending'
+          status: 'pending',
+          createdAt: new Date(),
+          updatedAt: new Date()
         })
         .returning()
         .execute();
