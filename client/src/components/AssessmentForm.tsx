@@ -161,7 +161,6 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
                 <input
                   id={`file-upload-${practice.id}`}
                   type="file"
-                  multiple
                   className="block w-full text-sm text-gray-500
                     file:mr-4 file:py-2 file:px-4
                     file:rounded-md file:border-0
@@ -170,22 +169,21 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
                     hover:file:bg-primary/90"
                   disabled={isUploading}
                   onChange={async (e) => {
-                    const files = Array.from(e.target.files || []);
-                    if (files.length > 0 && currentAssessment?.id) {
+                    const file = e.target.files?.[0];
+                    if (file && currentAssessment?.id) {
                       try {
                         setIsUploading(true);
-                        for (const file of files) {
-                          await uploadDocument(currentAssessment.id, file);
-                        }
+                        await uploadDocument(currentAssessment.id, file);
                         toast({
-                          title: "Documents uploaded",
-                          description: `Successfully uploaded ${files.length} document${files.length === 1 ? '' : 's'}.`
+                          title: "Document uploaded",
+                          description: "Successfully uploaded the document."
                         });
+                        // Refresh the documents list
                         onSave();
                       } catch (error) {
                         toast({
                           title: "Error",
-                          description: "Failed to upload one or more documents.",
+                          description: "Failed to upload the document.",
                           variant: "destructive"
                         });
                       } finally {
