@@ -1,10 +1,13 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "../db";
-import { practices, assessments, reports } from "@db/schema";
+import { practices, assessments, reports, documents } from "@db/schema";
 import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
+  // Increase payload size limit for file uploads
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
   app.get('/api/practices', async (req, res) => {
     try {
       const allPractices = await db.select().from(practices);
