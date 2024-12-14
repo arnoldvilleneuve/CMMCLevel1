@@ -1,16 +1,15 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "../db";
-import { practices, assessments, reports, documents } from "@db/schema";
+import { practices, assessments, reports, documents, documentChunks } from "@db/schema";
 import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
   // Configure middleware for handling large file uploads
   // Configure middleware for handling uploads
   app.use(express.json({ 
-    limit: '10mb',  // Increased for initialization payload
+    limit: '50mb',  // Increased for initialization payload
     verify: (req, res, buf) => {
-      // Store raw body for processing
       if (req.headers['content-type']?.includes('application/json')) {
         (req as any).rawBody = buf;
       }
@@ -18,7 +17,7 @@ export function registerRoutes(app: Express): Server {
   }));
   app.use(express.raw({ 
     type: 'application/octet-stream',
-    limit: '6gb', // Slightly higher than max file size to handle overhead
+    limit: '6gb', 
     verify: (req, res, buf) => {
       (req as any).rawBody = buf;
     }
@@ -200,6 +199,8 @@ export function registerRoutes(app: Express): Server {
   app.post('/api/assessments/:assessmentId/documents/:documentId/chunks/:chunkIndex', async (req, res) => {
     try {
       const { assessmentId, documentId, chunkIndex } = req.params;
+      const parsedDocId = parseInt(documentId);
+      const parsedChunkIndex = parseInt(chunkIndex);
       
       if (!req.is('application/octet-stream')) {
         return res.status(400).json({ error: 'Invalid content type' });
@@ -208,38 +209,71 @@ export function registerRoutes(app: Express): Server {
       const doc = await db
         .select()
         .from(documents)
-        .where(eq(documents.id, parseInt(documentId)))
+        .where(eq(documents.id, parsedDocId))
         .execute();
 
       if (!doc.length) {
         return res.status(404).json({ error: 'Document not found' });
       }
 
+      // Check if chunk already exists
+      const existingChunk = await db
+        .select()
+        .from(documentChunks)
+        .where(eq(documentChunks.documentId, parsedDocId))
+        .where(eq(documentChunks.chunkIndex, parsedChunkIndex))
+        .execute();
+
+      if (existingChunk.length > 0) {
+        return res.status(409).json({ error: 'Chunk already exists' });
+      }
+
       // Store chunk
-      await db.insert(documentChunks)
+      await db
+        .insert(documentChunks)
         .values({
-          documentId: parseInt(documentId),
-          chunkIndex: parseInt(chunkIndex),
+          documentId: parsedDocId,
+          chunkIndex: parsedChunkIndex,
           data: req.body.toString('base64')
         })
+        .execute();
+
+      // Get current upload progress
+      const chunks = await db
+        .select()
+        .from(documentChunks)
+        .where(eq(documentChunks.documentId, parsedDocId))
         .execute();
 
       // Update document progress
       const updatedDoc = await db
         .update(documents)
         .set({
-          uploadedChunks: doc[0].uploadedChunks + 1,
-          status: doc[0].uploadedChunks + 1 === doc[0].totalChunks ? 'complete' : 'pending',
+          uploadedChunks: chunks.length,
+          status: chunks.length === doc[0].totalChunks ? 'complete' : 'pending',
           updatedAt: new Date()
         })
-        .where(eq(documents.id, parseInt(documentId)))
+        .where(eq(documents.id, parsedDocId))
         .returning()
         .execute();
 
-      res.json(updatedDoc[0]);
+      res.json({
+        ...updatedDoc[0],
+        progress: Math.round((chunks.length / doc[0].totalChunks) * 100)
+      });
     } catch (error) {
       console.error('Chunk upload error:', error);
-      res.status(500).json({ error: 'Failed to upload chunk' });
+      if (error instanceof Error) {
+        res.status(500).json({ 
+          error: 'Failed to upload chunk',
+          details: error.message 
+        });
+      } else {
+        res.status(500).json({ 
+          error: 'Failed to upload chunk',
+          details: 'Unknown error occurred'
+        });
+      }
     }
   });
 

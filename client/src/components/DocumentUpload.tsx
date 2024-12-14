@@ -40,30 +40,52 @@ export function DocumentUpload({
       const chunk = file.slice(start, end);
       
       try {
-        const response = await fetch(
-          `/api/assessments/${assessmentId}/documents/${documentId}/chunks/${chunkIndex}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/octet-stream'
-            },
-            body: chunk
+        const maxRetries = 3;
+        let retries = 0;
+        let uploadSuccess = false;
+        
+        while (!uploadSuccess && retries < maxRetries) {
+          try {
+            const response = await fetch(
+              `/api/assessments/${assessmentId}/documents/${documentId}/chunks/${chunkIndex}`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/octet-stream'
+                },
+                body: chunk
+              }
+            );
+            
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+              if (response.status === 409) {
+                // Chunk already exists, consider it successful
+                uploadSuccess = true;
+                break;
+              }
+              throw new Error(errorData.error || `Failed to upload chunk ${chunkIndex}`);
+            }
+            
+            const data = await response.json();
+            setUploadingFiles(prev => ({
+              ...prev,
+              [file.name]: data.progress || Math.round(((chunkIndex + 1) / totalChunks) * 100)
+            }));
+            
+            uploadSuccess = true;
+          } catch (retryError) {
+            retries++;
+            if (retries === maxRetries) {
+              throw retryError;
+            }
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 1000));
           }
-        );
-        
-        if (!response.ok) {
-          throw new Error(`Failed to upload chunk ${chunkIndex}`);
         }
-        
-        // Update progress
-        const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
-        setUploadingFiles(prev => ({
-          ...prev,
-          [file.name]: progress
-        }));
-        
       } catch (error) {
-        throw new Error(`Failed to upload chunk ${chunkIndex}: ${error.message}`);
+        console.error(`Chunk upload error for ${file.name}, chunk ${chunkIndex}:`, error);
+        throw new Error(`Failed to upload chunk ${chunkIndex}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
   };
