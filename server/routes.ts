@@ -5,9 +5,33 @@ import { practices, assessments, reports, documents } from "@db/schema";
 import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
-  // Increase payload size limit for file uploads
+  // Configure middleware for handling file uploads with proper limits
   app.use(express.json({ limit: '100mb' }));
   app.use(express.urlencoded({ limit: '100mb', extended: true }));
+  
+  // Comprehensive error handling middleware
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error('Server error:', err);
+    
+    if (err.type === 'entity.too.large') {
+      return res.status(413).json({ 
+        error: 'File too large',
+        message: 'The uploaded file exceeds the maximum allowed size of 100MB.'
+      });
+    }
+    
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: err.message
+      });
+    }
+    
+    res.status(500).json({
+      error: 'Server Error',
+      message: 'An unexpected error occurred while processing your request.'
+    });
+  });
   
   // Add CORS and other necessary middleware
   app.use((req, res, next) => {
@@ -130,8 +154,7 @@ export function registerRoutes(app: Express): Server {
         .delete(documents)
         .where(eq(documents.id, parseInt(docId)))
         .where(eq(documents.assessmentId, parseInt(assessmentId)))
-        .returning()
-        .execute();
+        .returning();
 
       if (!result.length) {
         return res.status(404).json({ error: 'Document not found' });

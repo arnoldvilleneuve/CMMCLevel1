@@ -1,4 +1,4 @@
-import { DocumentUpload } from "./DocumentUpload";
+import { DocumentUpload } from "@/components/DocumentUpload";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -154,7 +154,8 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
 
             <div className="space-y-4">
               {currentAssessment?.id && (
-                <DocumentUpload
+                <div className="border-t pt-4">
+                  <DocumentUpload
                     assessmentId={currentAssessment.id}
                     documents={documents}
                     isLoading={isLoadingDocuments}
@@ -164,8 +165,11 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
                       });
                     }}
                   />
+                </div>
               )}
-              <Button type="submit">Save Assessment</Button>
+              <div className="flex justify-end">
+                <Button type="submit">Save Assessment</Button>
+              </div>
             </div>
           </form>
         </Form>

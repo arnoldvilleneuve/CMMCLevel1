@@ -28,6 +28,7 @@ export interface Document {
   filename: string;
   data: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 

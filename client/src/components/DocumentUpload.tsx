@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { uploadDocument } from "@/lib/api";
 import { Download, Trash2, Upload } from "lucide-react";
 import type { Document } from "@/types/assessment";
+import { Progress } from "@/components/ui/progress";
 
 interface DocumentUploadProps {
   assessmentId: number;
@@ -13,38 +14,91 @@ interface DocumentUploadProps {
   onUploadComplete?: () => void;
 }
 
-export function DocumentUpload({ 
-  assessmentId, 
-  documents = [], 
+export function DocumentUpload({
+  assessmentId,
+  documents,
   isLoading,
-  onUploadComplete 
+  onUploadComplete
 }: DocumentUploadProps) {
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState<{ [key: string]: number }>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const isUploading = Object.keys(uploadingFiles).length > 0;
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    setIsUploading(true);
-    
     try {
-      // Convert FileList to array for easier handling
       const fileArray = Array.from(files);
       
-      // Upload each file sequentially
+      // Validate file sizes
+      const oversizedFiles = fileArray.filter(file => file.size > 10 * 1024 * 1024);
+      if (oversizedFiles.length > 0) {
+        throw new Error(
+          `The following files exceed the 10MB limit: ${oversizedFiles
+            .map(f => f.name)
+            .join(", ")}`
+        );
+      }
+
+      // Upload files sequentially
       for (const file of fileArray) {
-        if (file.size > 100 * 1024 * 1024) { // 100MB limit
-          throw new Error(`File ${file.name} is too large. Maximum size is 100MB.`);
+        try {
+          // Initialize progress for current file
+          setUploadingFiles(prev => ({
+            ...prev,
+            [file.name]: 0
+          }));
+
+          // Simulate upload progress
+          const progressInterval = setInterval(() => {
+            setUploadingFiles(prev => ({
+              ...prev,
+              [file.name]: Math.min((prev[file.name] || 0) + 10, 90)
+            }));
+          }, 200);
+
+          await uploadDocument(assessmentId, file);
+
+          clearInterval(progressInterval);
+
+          // Mark file as complete
+          setUploadingFiles(prev => ({
+            ...prev,
+            [file.name]: 100
+          }));
+
+          toast({
+            title: "Success",
+            description: `${file.name} uploaded successfully`
+          });
+
+          // Remove file from progress after a delay
+          setTimeout(() => {
+            setUploadingFiles(prev => {
+              const newState = { ...prev };
+              delete newState[file.name];
+              return newState;
+            });
+          }, 1000);
+
+        } catch (error) {
+          console.error('Upload error for file:', file.name, error);
+          toast({
+            title: "Error",
+            description: `Failed to upload ${file.name}`,
+            variant: "destructive"
+          });
+          
+          // Remove failed file from progress
+          setUploadingFiles(prev => {
+            const newState = { ...prev };
+            delete newState[file.name];
+            return newState;
+          });
         }
-        
-        await uploadDocument(assessmentId, file);
-        
-        toast({
-          title: "Success",
-          description: `${file.name} uploaded successfully`
-        });
       }
 
       // Refresh documents list
@@ -53,23 +107,24 @@ export function DocumentUpload({
       });
 
       onUploadComplete?.();
+
     } catch (error) {
       console.error('Upload error:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to upload document",
+        description: error instanceof Error ? error.message : "Failed to upload documents",
         variant: "destructive"
       });
     } finally {
-      setIsUploading(false);
       // Reset input
       event.target.value = '';
     }
   };
 
-  const handleDownload = (doc: Document) => {
+  const handleDownload = async (doc: Document) => {
     try {
-      const [fileType, base64Data] = doc.data.split(',');
+      // Extract the base64 data and file type
+      const [header, base64Data] = doc.data.split(',');
       const byteCharacters = atob(base64Data);
       const byteArray = new Uint8Array(byteCharacters.length);
       
@@ -77,6 +132,7 @@ export function DocumentUpload({
         byteArray[i] = byteCharacters.charCodeAt(i);
       }
       
+      // Create blob and download
       const blob = new Blob([byteArray]);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -107,16 +163,18 @@ export function DocumentUpload({
         throw new Error('Failed to delete document');
       }
 
+      // Refresh documents list
+      await queryClient.invalidateQueries({
+        queryKey: ['documents', assessmentId]
+      });
+
       toast({
         title: "Success",
         description: "Document deleted successfully"
       });
 
-      // Refresh documents list
-      await queryClient.invalidateQueries({
-        queryKey: ['documents', assessmentId]
-      });
     } catch (error) {
+      console.error('Delete error:', error);
       toast({
         title: "Error",
         description: "Failed to delete document",
@@ -128,8 +186,8 @@ export function DocumentUpload({
   return (
     <div className="space-y-4">
       <div>
-        <h4 className="text-sm font-medium mb-2">Evidence Documents</h4>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-medium">Evidence Documents</h4>
           <Button
             variant="outline"
             className="relative"
@@ -139,43 +197,54 @@ export function DocumentUpload({
               type="file"
               onChange={handleFileUpload}
               disabled={isUploading}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
               multiple
+              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
             />
             <Upload className="h-4 w-4 mr-2" />
             {isUploading ? "Uploading..." : "Upload Documents"}
           </Button>
         </div>
+        
+        {/* Upload Progress */}
+        {Object.entries(uploadingFiles).map(([filename, progress]) => (
+          <div key={filename} className="mt-2">
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-muted-foreground truncate">{filename}</span>
+              <span className="text-muted-foreground">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-1" />
+          </div>
+        ))}
+
         <p className="text-sm text-muted-foreground mt-2">
-          Upload evidence documents. You can select multiple files at once.
+          Supported formats: Images, PDF, Word, Excel, Text files (Max 10MB per file)
         </p>
       </div>
 
+      {/* Document List */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">Uploaded Documents</h4>
-          {isLoading && (
-            <span className="text-sm text-muted-foreground animate-pulse">
-              Loading...
-            </span>
-          )}
-        </div>
-
-        {documents.length > 0 ? (
+        {documents && documents.length > 0 ? (
           <div className="space-y-2">
             {documents.map((doc) => (
               <div
                 key={doc.id}
                 className="flex items-center justify-between p-3 border rounded-md hover:bg-accent/50 transition-colors"
               >
-                <span className="text-sm font-medium truncate max-w-[200px]">
-                  {doc.filename}
-                </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center space-x-4 flex-1 min-w-0">
+                  <span className="text-sm font-medium truncate flex-1">
+                    {doc.filename}
+                  </span>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">
+                    {new Date(doc.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 ml-4">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDownload(doc)}
+                    title="Download"
                   >
                     <Download className="h-4 w-4" />
                   </Button>
@@ -183,6 +252,7 @@ export function DocumentUpload({
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(doc.id)}
+                    title="Delete"
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
@@ -192,7 +262,7 @@ export function DocumentUpload({
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            No documents uploaded yet.
+            {isLoading ? "Loading documents..." : "No documents uploaded yet."}
           </p>
         )}
       </div>
