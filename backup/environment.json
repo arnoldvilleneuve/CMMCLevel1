@@ -1,0 +1,46 @@
+{
+  "name": "CMMC Compliance Portal",
+  "type": "typescript",
+  "environment": {
+    "node": "20.x",
+    "typescript": "^5.0.0"
+  },
+  "replit": {
+    "config": {
+      "run": "npm run dev",
+      "packager": "nodejs-20",
+      "enabledLanguages": ["typescript", "javascript", "html", "css"]
+    }
+  },
+  "dependencies": {
+    "core": [
+      "@tanstack/react-query",
+      "typescript",
+      "react",
+      "react-dom",
+      "express",
+      "drizzle-orm",
+      "drizzle-zod",
+      "zod"
+    ],
+    "ui": [
+      "@radix-ui/react-accordion",
+      "@radix-ui/react-alert-dialog",
+      "@radix-ui/react-avatar",
+      "@radix-ui/react-dialog",
+      "tailwindcss",
+      "tailwindcss-animate"
+    ],
+    "development": [
+      "@types/react",
+      "@types/react-dom",
+      "@types/express",
+      "vite",
+      "@vitejs/plugin-react"
+    ]
+  },
+  "databaseConfig": {
+    "type": "postgresql",
+    "version": "latest"
+  }
+}
