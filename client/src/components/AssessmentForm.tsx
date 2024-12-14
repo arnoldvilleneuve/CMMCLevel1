@@ -30,12 +30,41 @@ interface AssessmentFormProps {
 export default function AssessmentForm({ practice, currentAssessment, onSave }: AssessmentFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isUploading, setIsUploading] = useState(false);
+  const [localAssessment, setLocalAssessment] = useState(currentAssessment);
+  const [isCreatingAssessment, setIsCreatingAssessment] = useState(false);
+  
+  // Create assessment on mount if it doesn't exist
+  useEffect(() => {
+    async function createInitialAssessment() {
+      if (!currentAssessment && !isCreatingAssessment) {
+        setIsCreatingAssessment(true);
+        try {
+          const newAssessment = await updateAssessment({
+            practiceId: practice.practiceId,
+            evidence: "",
+            status: "Not Started"
+          });
+          setLocalAssessment(newAssessment);
+          onSave();
+        } catch (error) {
+          console.error("Failed to create initial assessment:", error);
+          toast({
+            title: "Error",
+            description: "Failed to initialize assessment",
+            variant: "destructive"
+          });
+        } finally {
+          setIsCreatingAssessment(false);
+        }
+      }
+    }
+    createInitialAssessment();
+  }, [currentAssessment, practice.practiceId, onSave]);
 
   const { data: documents = [], isLoading: isLoadingDocuments } = useQuery({
-    queryKey: ['documents', currentAssessment?.id],
-    queryFn: () => currentAssessment?.id ? getDocuments(currentAssessment.id) : Promise.resolve([]),
-    enabled: !!currentAssessment?.id
+    queryKey: ['documents', localAssessment?.id],
+    queryFn: () => localAssessment?.id ? getDocuments(localAssessment.id) : Promise.resolve([]),
+    enabled: !!localAssessment?.id
   });
 
   const form = useForm<z.infer<typeof assessmentSchema>>({
@@ -101,29 +130,29 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
                     />
                   </FormControl>
                   <FormDescription>
-                    <div className="space-y-4 text-sm">
-                      <div className="space-y-2">
-                        <span className="font-medium block">Assessment Guidance:</span>
+                    <span className="space-y-4 text-sm block">
+                      <span className="space-y-2 block">
+                        <strong className="block">Assessment Guidance:</strong>
                         <span className="block">{practice.assessment}</span>
-                      </div>
-                      <div className="space-y-2">
-                        <span className="font-medium block">Assessment Methods:</span>
-                        <div className="pl-5 space-y-1">
-                          • EXAMINE organizational policies and procedures
-                          • INTERVIEW personnel responsible for implementing controls
+                      </span>
+                      <span className="space-y-2 block">
+                        <strong className="block">Assessment Methods:</strong>
+                        <span className="block pl-5">
+                          • EXAMINE organizational policies and procedures<br/>
+                          • INTERVIEW personnel responsible for implementing controls<br/>
                           • TEST implemented controls and mechanisms
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <span className="font-medium block">Evidence Examples:</span>
-                        <div className="pl-5 space-y-1">
-                          • Screenshots of implemented controls
-                          • System configuration documentation
-                          • Relevant policies and procedures
+                        </span>
+                      </span>
+                      <span className="space-y-2 block">
+                        <strong className="block">Evidence Examples:</strong>
+                        <span className="block pl-5">
+                          • Screenshots of implemented controls<br/>
+                          • System configuration documentation<br/>
+                          • Relevant policies and procedures<br/>
                           • Access control lists or logs
-                        </div>
-                      </div>
-                    </div>
+                        </span>
+                      </span>
+                    </span>
                   </FormDescription>
                 </FormItem>
               )}
@@ -156,22 +185,16 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
 
             <div className="space-y-4">
               <div className="border-t pt-4">
-                {currentAssessment ? (
-                  <DocumentUpload
-                    assessmentId={currentAssessment.id}
-                    documents={documents}
-                    isLoading={isLoadingDocuments}
-                    onUploadComplete={() => {
-                      queryClient.invalidateQueries({
-                        queryKey: ['documents', currentAssessment.id]
-                      });
-                    }}
-                  />
-                ) : (
-                  <div className="text-sm text-muted-foreground">
-                    Save the assessment first to enable document uploads
-                  </div>
-                )}
+                <DocumentUpload
+                  assessmentId={localAssessment?.id}
+                  documents={documents}
+                  isLoading={isLoadingDocuments || isCreatingAssessment}
+                  onUploadComplete={() => {
+                    queryClient.invalidateQueries({
+                      queryKey: ['documents', localAssessment?.id]
+                    });
+                  }}
+                />
               </div>
               <div className="flex justify-end">
                 <Button type="submit">Save Assessment</Button>
