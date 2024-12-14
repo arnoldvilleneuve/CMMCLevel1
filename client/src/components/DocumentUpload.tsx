@@ -76,7 +76,7 @@ export function DocumentUpload({
 
     try {
       const fileArray = Array.from(files);
-      const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB limit
+      const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB limit
       
       // Validate file sizes
       const oversizedFiles = fileArray.filter(file => file.size > MAX_FILE_SIZE);

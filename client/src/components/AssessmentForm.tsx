@@ -101,27 +101,27 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
                     />
                   </FormControl>
                   <FormDescription>
-                    <div className="space-y-4">
-                      <div className="text-sm">
-                        <div className="font-medium mb-2">Assessment Guidance:</div>
-                        <div>{practice.assessment}</div>
+                    <div className="space-y-4 text-sm">
+                      <div className="space-y-2">
+                        <span className="font-medium block">Assessment Guidance:</span>
+                        <span className="block">{practice.assessment}</span>
                       </div>
-                      <div className="text-sm">
-                        <div className="font-medium mb-2">Assessment Methods:</div>
-                        <ul className="list-disc pl-5 space-y-1">
-                          <li>EXAMINE organizational policies and procedures</li>
-                          <li>INTERVIEW personnel responsible for implementing controls</li>
-                          <li>TEST implemented controls and mechanisms</li>
-                        </ul>
+                      <div className="space-y-2">
+                        <span className="font-medium block">Assessment Methods:</span>
+                        <div className="pl-5 space-y-1">
+                          • EXAMINE organizational policies and procedures
+                          • INTERVIEW personnel responsible for implementing controls
+                          • TEST implemented controls and mechanisms
+                        </div>
                       </div>
-                      <div className="text-sm">
-                        <div className="font-medium mb-2">Evidence Examples:</div>
-                        <ul className="list-disc pl-5 space-y-1">
-                          <li>Screenshots of implemented controls</li>
-                          <li>System configuration documentation</li>
-                          <li>Relevant policies and procedures</li>
-                          <li>Access control lists or logs</li>
-                        </ul>
+                      <div className="space-y-2">
+                        <span className="font-medium block">Evidence Examples:</span>
+                        <div className="pl-5 space-y-1">
+                          • Screenshots of implemented controls
+                          • System configuration documentation
+                          • Relevant policies and procedures
+                          • Access control lists or logs
+                        </div>
                       </div>
                     </div>
                   </FormDescription>

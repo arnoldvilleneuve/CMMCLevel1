@@ -9,7 +9,7 @@ export function registerRoutes(app: Express): Server {
   app.use(express.json({ limit: '100kb' })); // Keep JSON payload small
   app.use(express.raw({ 
     type: 'application/octet-stream',
-    limit: '2gb' // Allow large raw uploads for chunked data
+    limit: '5gb' // Allow large raw uploads for chunked data
   }));
   app.use(express.urlencoded({ extended: true, limit: '100kb' }));
   
