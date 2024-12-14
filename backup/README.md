@@ -1,4 +1,28 @@
-# CMMC Compliance Portal - Complete Backup & Restoration Guide
+# CMMC Compliance Portal - Complete Backup & Export Guide
+
+## GitHub Export Process
+
+### 1. Create GitHub Repository
+1. Go to GitHub.com and sign in to your account
+2. Click "New" to create a new repository
+3. Name it "cmmc-compliance-portal"
+4. Make it Private (recommended for compliance portals)
+5. Do not initialize with README (we have our own)
+
+### 2. Link Local Repository
+```bash
+# Configure Git (if not already done)
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+
+# Add GitHub remote
+git remote add origin https://github.com/YOUR_USERNAME/cmmc-compliance-portal.git
+git branch -M main
+git push -u origin main
+
+# Push all tags
+git push --tags
+```
 
 ## Project Checkpoints and Tags
 
@@ -7,6 +31,7 @@
 - `v1.0.0-docs`: Document management system with chunked upload
 - `v1.0.0-assess`: Assessment tracking and reporting features
 - `v1.0.0-backup`: Complete backup solution with database and configs
+- `v1.0.0-backup-enhanced`: Enhanced backup with complete restoration capability
 
 ## Full Project Restoration
 
@@ -111,6 +136,46 @@ If you encounter issues during restoration:
 2. **Dependencies Issues**
    ```bash
    # Clear npm cache and reinstall
+## Importing to New Replit Environment
+
+### 1. Create New Replit Project
+1. Go to replit.com and click "Create Repl"
+2. Choose "Import from GitHub"
+3. Paste your GitHub repository URL
+4. Select "TypeScript" as the language
+5. Click "Import from GitHub"
+
+### 2. Setup Environment
+1. Add all required secrets from backup/environment.json
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create database and import schema:
+   ```sql
+   psql $DATABASE_URL < backup/db/schema.sql
+   ```
+
+### 3. Verify Installation
+1. Start the development server:
+   ```bash
+   npm run dev
+   ```
+2. Access the application at the provided URL
+3. Verify all features are working:
+   - Assessment management
+   - Document upload
+   - Report generation
+
+### 4. Troubleshooting
+If you encounter issues:
+1. Check Replit secrets match backup/environment.json
+2. Verify database schema was imported correctly
+3. Review server logs for specific errors
+4. Check GitHub tags for specific versions:
+   ```bash
+   git checkout v1.0.0-backup-enhanced
+   ```
    rm -rf node_modules
    npm cache clean --force
    npm install
