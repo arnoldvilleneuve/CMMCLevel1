@@ -1,54 +1,137 @@
-# CMMC Compliance Portal - Backup & Restoration Guide
+# CMMC Compliance Portal - Complete Backup & Restoration Guide
 
-## Project Checkpoints
+## Project Checkpoints and Tags
 
-- `v1.0.0-base`: Base checkpoint with complete working prototype
-- `v1.0.0-auth`: Authentication and user management features
-- `v1.0.0-docs`: Document upload and management system
-- `v1.0.0-assess`: Assessment tracking and reporting functionality
+- `v1.0.0-base`: Base checkpoint - Complete working prototype with all dependencies
+- `v1.0.0-auth`: Authentication and user management implementation
+- `v1.0.0-docs`: Document management system with chunked upload
+- `v1.0.0-assess`: Assessment tracking and reporting features
+- `v1.0.0-backup`: Complete backup solution with database and configs
 
-## Restoration Steps
+## Full Project Restoration
 
-1. **Create New Replit Project**
-   - Create a new TypeScript project
-   - Import from Git repository
+### 1. Create New Replit Project
+```bash
+# Create new project
+1. Start a new Replit project
+2. Choose "TypeScript" as the template
+3. Import from Git repository
+```
 
-2. **Environment Setup**
-   ```bash
-   # Install dependencies
-   npm install
-   
-   # Set up database
-   - Create new PostgreSQL database
-   - Import schema from backup/db/schema.sql
-   ```
+### 2. Database Setup
+```sql
+# Create database in Replit
+1. Open "Tools" in Replit sidebar
+2. Click "Database" to create PostgreSQL instance
+3. Import schema:
+   psql $DATABASE_URL < backup/db/schema.sql
+```
 
-3. **Environment Variables**
-   Required environment variables:
-   - DATABASE_URL
-   - PGUSER
-   - PGPASSWORD
-   - PGDATABASE
-   - PGHOST
-   - PGPORT
+### 3. Environment Configuration
+```bash
+# Required Environment Variables
+1. DATABASE_URL (Provided by Replit)
+2. PGUSER (Provided by Replit)
+3. PGPASSWORD (Provided by Replit)
+4. PGDATABASE (Provided by Replit)
+5. PGHOST (Provided by Replit)
+6. PGPORT (Provided by Replit)
+```
 
-4. **Verify Installation**
-   ```bash
-   # Start development server
-   npm run dev
-   ```
+### 4. Dependencies Installation
+```bash
+# Install all required packages
+npm install
+```
+
+### 5. Project Structure Verification
+```bash
+# Verify directories and files
+- /client         # React frontend
+- /server         # Express backend
+- /db             # Database schemas
+- /backup         # Backup files
+```
+
+### 6. Development Server
+```bash
+# Start the development server
+npm run dev
+```
 
 ## Backup Components
 
-1. Database Schema: `backup/db/schema.sql`
-2. Environment Configuration: `backup/environment.json`
-3. Git Tags: Use `git checkout <tag>` to restore specific versions
+### 1. Database
+- Schema: `backup/db/schema.sql`
+- Tables:
+  - practices
+  - assessments
+  - documents
+  - document_chunks
+  - reports
+
+### 2. Configuration Files
+- Environment: `backup/environment.json`
+- Project Config: 
+  - `package.json`
+  - `tsconfig.json`
+  - `vite.config.ts`
+
+### 3. Version Control
+- Git Tags:
+  ```bash
+  git checkout v1.0.0-base    # Base implementation
+  git checkout v1.0.0-auth    # Auth features
+  git checkout v1.0.0-docs    # Document system
+  git checkout v1.0.0-assess  # Assessment features
+  git checkout v1.0.0-backup  # Full backup
+  ```
 
 ## Version History
 
-- v1.0.0 (2024-12-14): Initial working prototype with document management
-- More versions will be added as development progresses
+### v1.0.0 Series
+- v1.0.0-base (2024-12-14): Initial working prototype
+- v1.0.0-auth (2024-12-14): Authentication system
+- v1.0.0-docs (2024-12-14): Document management
+- v1.0.0-assess (2024-12-14): Assessment tracking
+- v1.0.0-backup (2024-12-14): Complete backup solution
 
-## Support
+## Emergency Restoration
 
-For restoration support, please contact the development team.
+If you encounter issues during restoration:
+
+1. **Database Issues**
+   ```sql
+   -- Reset database
+   DROP SCHEMA public CASCADE;
+   CREATE SCHEMA public;
+   -- Then reimport schema
+   ```
+
+2. **Dependencies Issues**
+   ```bash
+   # Clear npm cache and reinstall
+   rm -rf node_modules
+   npm cache clean --force
+   npm install
+   ```
+
+3. **Replit Environment**
+   - Use "Secrets" tool to set environment variables
+   - Restart Replit if environment changes don't take effect
+
+## Support and Maintenance
+
+For restoration support or technical assistance:
+1. Check the backup documentation first
+2. Review the git tags for specific versions
+3. Contact development team for additional support
+
+## Regular Backup Schedule
+
+Recommended backup frequency:
+- Database dumps: Daily
+- Code checkpoints: After major features
+- Full backup: Weekly
+
+Remember to maintain multiple backup points to ensure recovery options.
