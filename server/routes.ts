@@ -149,21 +149,28 @@ export function registerRoutes(app: Express): Server {
     try {
       const { assessmentId, docId } = req.params;
       
-      // Delete the document if it exists and belongs to the assessment
-      const result = await db
-        .delete(documents)
+      // First verify if document exists and belongs to assessment
+      const doc = await db
+        .select()
+        .from(documents)
         .where(eq(documents.id, parseInt(docId)))
         .where(eq(documents.assessmentId, parseInt(assessmentId)))
-        .returning();
-
-      if (!result.length) {
-        return res.status(404).json({ error: 'Document not found' });
+        .execute();
+      
+      if (!doc.length) {
+        return res.status(404).json({ error: 'Document not found or does not belong to this assessment' });
       }
 
-      res.json({ success: true });
+      // Delete the document
+      await db
+        .delete(documents)
+        .where(eq(documents.id, parseInt(docId)))
+        .execute();
+
+      res.json({ success: true, message: 'Document deleted successfully' });
     } catch (error) {
       console.error('Document deletion error:', error);
-      res.status(500).json({ error: 'Failed to delete document' });
+      res.status(500).json({ error: 'Failed to delete document', details: error.message });
     }
   });
 

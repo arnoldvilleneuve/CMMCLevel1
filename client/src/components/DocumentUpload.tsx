@@ -6,21 +6,24 @@ import { uploadDocument } from "@/lib/api";
 import { Download, Trash2, Upload } from "lucide-react";
 import type { Document } from "@/types/assessment";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface DocumentUploadProps {
   assessmentId: number;
-  documents: Document[];
-  isLoading: boolean;
+  documents?: Document[];
+  isLoading?: boolean;
   onUploadComplete?: () => void;
 }
 
 export function DocumentUpload({
   assessmentId,
-  documents,
-  isLoading,
+  documents = [],
+  isLoading = false,
   onUploadComplete
 }: DocumentUploadProps) {
   const [uploadingFiles, setUploadingFiles] = useState<{ [key: string]: number }>({});
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -29,11 +32,13 @@ export function DocumentUpload({
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
+    
+    setError(null);
 
     try {
       const fileArray = Array.from(files);
       
-      // Validate file sizes
+      // Validate file sizes (10MB limit)
       const oversizedFiles = fileArray.filter(file => file.size > 10 * 1024 * 1024);
       if (oversizedFiles.length > 0) {
         throw new Error(
@@ -46,7 +51,6 @@ export function DocumentUpload({
       // Upload files sequentially
       for (const file of fileArray) {
         try {
-          // Initialize progress for current file
           setUploadingFiles(prev => ({
             ...prev,
             [file.name]: 0
@@ -56,15 +60,14 @@ export function DocumentUpload({
           const progressInterval = setInterval(() => {
             setUploadingFiles(prev => ({
               ...prev,
-              [file.name]: Math.min((prev[file.name] || 0) + 10, 90)
+              [file.name]: Math.min((prev[file.name] || 0) + 5, 90)
             }));
-          }, 200);
+          }, 100);
 
           await uploadDocument(assessmentId, file);
-
+          
           clearInterval(progressInterval);
-
-          // Mark file as complete
+          
           setUploadingFiles(prev => ({
             ...prev,
             [file.name]: 100
@@ -86,13 +89,8 @@ export function DocumentUpload({
 
         } catch (error) {
           console.error('Upload error for file:', file.name, error);
-          toast({
-            title: "Error",
-            description: `Failed to upload ${file.name}`,
-            variant: "destructive"
-          });
+          setError(`Failed to upload ${file.name}: ${error.message}`);
           
-          // Remove failed file from progress
           setUploadingFiles(prev => {
             const newState = { ...prev };
             delete newState[file.name];
@@ -110,11 +108,7 @@ export function DocumentUpload({
 
     } catch (error) {
       console.error('Upload error:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to upload documents",
-        variant: "destructive"
-      });
+      setError(error instanceof Error ? error.message : "Failed to upload documents");
     } finally {
       // Reset input
       event.target.value = '';
@@ -123,7 +117,7 @@ export function DocumentUpload({
 
   const handleDownload = async (doc: Document) => {
     try {
-      // Extract the base64 data and file type
+      // Extract the base64 data
       const [header, base64Data] = doc.data.split(',');
       const byteCharacters = atob(base64Data);
       const byteArray = new Uint8Array(byteCharacters.length);
@@ -132,7 +126,6 @@ export function DocumentUpload({
         byteArray[i] = byteCharacters.charCodeAt(i);
       }
       
-      // Create blob and download
       const blob = new Blob([byteArray]);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -159,8 +152,10 @@ export function DocumentUpload({
         credentials: 'include'
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error('Failed to delete document');
+        throw new Error(data.error || 'Failed to delete document');
       }
 
       // Refresh documents list
@@ -177,7 +172,7 @@ export function DocumentUpload({
       console.error('Delete error:', error);
       toast({
         title: "Error",
-        description: "Failed to delete document",
+        description: error instanceof Error ? error.message : "Failed to delete document",
         variant: "destructive"
       });
     }
@@ -190,7 +185,7 @@ export function DocumentUpload({
           <h4 className="text-sm font-medium">Evidence Documents</h4>
           <Button
             variant="outline"
-            className="relative"
+            className={cn("relative", isUploading && "cursor-not-allowed opacity-50")}
             disabled={isUploading}
           >
             <input
@@ -206,6 +201,12 @@ export function DocumentUpload({
           </Button>
         </div>
         
+        {error && (
+          <Alert variant="destructive" className="mt-2">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         {/* Upload Progress */}
         {Object.entries(uploadingFiles).map(([filename, progress]) => (
           <div key={filename} className="mt-2">

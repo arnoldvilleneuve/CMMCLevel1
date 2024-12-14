@@ -100,27 +100,29 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription className="space-y-4">
-                    <div className="text-sm">
-                      <p className="font-medium mb-2">Assessment Guidance:</p>
-                      <p>{practice.assessment}</p>
-                    </div>
-                    <div className="text-sm">
-                      <p className="font-medium mb-2">Assessment Methods:</p>
-                      <ul className="list-disc pl-5 space-y-1">
-                        <li>EXAMINE organizational policies and procedures</li>
-                        <li>INTERVIEW personnel responsible for implementing controls</li>
-                        <li>TEST implemented controls and mechanisms</li>
-                      </ul>
-                    </div>
-                    <div className="text-sm">
-                      <p className="font-medium mb-2">Evidence Examples:</p>
-                      <ul className="list-disc pl-5 space-y-1">
-                        <li>Screenshots of implemented controls</li>
-                        <li>System configuration documentation</li>
-                        <li>Relevant policies and procedures</li>
-                        <li>Access control lists or logs</li>
-                      </ul>
+                  <FormDescription>
+                    <div className="space-y-4">
+                      <div className="text-sm">
+                        <div className="font-medium mb-2">Assessment Guidance:</div>
+                        <div>{practice.assessment}</div>
+                      </div>
+                      <div className="text-sm">
+                        <div className="font-medium mb-2">Assessment Methods:</div>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>EXAMINE organizational policies and procedures</li>
+                          <li>INTERVIEW personnel responsible for implementing controls</li>
+                          <li>TEST implemented controls and mechanisms</li>
+                        </ul>
+                      </div>
+                      <div className="text-sm">
+                        <div className="font-medium mb-2">Evidence Examples:</div>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Screenshots of implemented controls</li>
+                          <li>System configuration documentation</li>
+                          <li>Relevant policies and procedures</li>
+                          <li>Access control lists or logs</li>
+                        </ul>
+                      </div>
                     </div>
                   </FormDescription>
                 </FormItem>
