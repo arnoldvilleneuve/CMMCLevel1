@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { HelpCircle } from "lucide-react";
 import { updateAssessment, uploadDocument, getDocuments } from "@/lib/api";
 import type { Practice, Assessment, Document } from "@/types/assessment";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const assessmentSchema = z.object({
   evidence: z.string().min(1, "Evidence is required"),
@@ -30,13 +30,13 @@ interface AssessmentFormProps {
 export default function AssessmentForm({ practice, currentAssessment, onSave }: AssessmentFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [localAssessment, setLocalAssessment] = useState(currentAssessment);
+  const [localAssessment, setLocalAssessment] = useState<Assessment | undefined>(currentAssessment);
   const [isCreatingAssessment, setIsCreatingAssessment] = useState(false);
   
   // Create assessment on mount if it doesn't exist
   useEffect(() => {
     async function createInitialAssessment() {
-      if (!currentAssessment && !isCreatingAssessment) {
+      if (!currentAssessment && !isCreatingAssessment && !localAssessment) {
         setIsCreatingAssessment(true);
         try {
           const newAssessment = await updateAssessment({
@@ -59,7 +59,7 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
       }
     }
     createInitialAssessment();
-  }, [currentAssessment, practice.practiceId, onSave]);
+  }, [currentAssessment, practice.practiceId, onSave, localAssessment]);
 
   const { data: documents = [], isLoading: isLoadingDocuments } = useQuery({
     queryKey: ['documents', localAssessment?.id],
@@ -186,13 +186,15 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
             <div className="space-y-4">
               <div className="border-t pt-4">
                 <DocumentUpload
-                  assessmentId={localAssessment?.id}
+                  assessmentId={localAssessment?.id ?? 0}
                   documents={documents}
                   isLoading={isLoadingDocuments || isCreatingAssessment}
                   onUploadComplete={() => {
-                    queryClient.invalidateQueries({
-                      queryKey: ['documents', localAssessment?.id]
-                    });
+                    if (localAssessment?.id) {
+                      queryClient.invalidateQueries({
+                        queryKey: ['documents', localAssessment.id]
+                      });
+                    }
                   }}
                 />
               </div>
