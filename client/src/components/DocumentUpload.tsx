@@ -15,7 +15,7 @@ interface DocumentUploadProps {
 
 export function DocumentUpload({ 
   assessmentId, 
-  documents, 
+  documents = [], 
   isLoading,
   onUploadComplete 
 }: DocumentUploadProps) {

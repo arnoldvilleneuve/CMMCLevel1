@@ -154,47 +154,16 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
 
             <div className="space-y-4">
               {currentAssessment?.id && (
-                <>
-                  <DocumentUpload
+                <DocumentUpload
                     assessmentId={currentAssessment.id}
+                    documents={documents}
+                    isLoading={isLoadingDocuments}
                     onUploadComplete={() => {
                       queryClient.invalidateQueries({
                         queryKey: ['documents', currentAssessment.id]
                       });
                     }}
                   />
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium">Uploaded Documents</h4>
-                      {isLoadingDocuments && (
-                        <span className="text-sm text-muted-foreground animate-pulse">
-                          Loading...
-                        </span>
-                      )}
-                    </div>
-
-                    {documents.length > 0 ? (
-                      <div className="space-y-2">
-                        {documents.map((doc) => (
-                          <div
-                            key={doc.id}
-                            className="flex items-center justify-between p-2 border rounded-md hover:bg-accent/50 transition-colors"
-                          >
-                            <span className="text-sm font-medium">{doc.filename}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(doc.createdAt).toLocaleString()}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        No documents uploaded yet.
-                      </p>
-                    )}
-                  </div>
-                </>
               )}
               <Button type="submit">Save Assessment</Button>
             </div>

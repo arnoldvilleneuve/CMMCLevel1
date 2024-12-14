@@ -82,7 +82,7 @@ export function registerRoutes(app: Express): Server {
         .select()
         .from(assessments)
         .where(eq(assessments.id, parseInt(id)))
-        .limit(1);
+        .execute();
 
       if (!assessment.length) {
         return res.status(404).json({ error: 'Assessment not found' });
@@ -96,7 +96,8 @@ export function registerRoutes(app: Express): Server {
           filename,
           data
         })
-        .returning();
+        .returning()
+        .execute();
       
       const doc = result[0];
       res.json({
@@ -116,23 +117,17 @@ export function registerRoutes(app: Express): Server {
     try {
       const { assessmentId, docId } = req.params;
       
-      // Verify document exists and belongs to the assessment
-      const document = await db
-        .select()
-        .from(documents)
-        .where(eq(documents.id, parseInt(docId)))
-        .where(eq(documents.assessmentId, parseInt(assessmentId)))
-        .limit(1);
-
-      if (!document.length) {
-        return res.status(404).json({ error: 'Document not found' });
-      }
-
-      // Delete the document
-      await db
+      // Delete the document if it exists and belongs to the assessment
+      const result = await db
         .delete(documents)
         .where(eq(documents.id, parseInt(docId)))
-        .where(eq(documents.assessmentId, parseInt(assessmentId)));
+        .where(eq(documents.assessmentId, parseInt(assessmentId)))
+        .returning()
+        .execute();
+
+      if (!result.length) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
 
       res.json({ success: true });
     } catch (error) {
@@ -151,11 +146,13 @@ export function registerRoutes(app: Express): Server {
           id: documents.id,
           assessmentId: documents.assessmentId,
           filename: documents.filename,
-          createdAt: documents.createdAt
+          createdAt: documents.createdAt,
+          data: documents.data
         })
         .from(documents)
         .where(eq(documents.assessmentId, parseInt(id)))
-        .orderBy(documents.createdAt);
+        .orderBy(documents.createdAt)
+        .execute();
       
       res.json(docs);
     } catch (error) {
