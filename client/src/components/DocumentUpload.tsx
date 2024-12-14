@@ -24,17 +24,28 @@ export function DocumentUpload({
   const queryClient = useQueryClient();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
+    setIsUploading(true);
+    
     try {
-      setIsUploading(true);
-      await uploadDocument(assessmentId, file);
+      // Convert FileList to array for easier handling
+      const fileArray = Array.from(files);
       
-      toast({
-        title: "Success",
-        description: `${file.name} uploaded successfully`
-      });
+      // Upload each file sequentially
+      for (const file of fileArray) {
+        if (file.size > 100 * 1024 * 1024) { // 100MB limit
+          throw new Error(`File ${file.name} is too large. Maximum size is 100MB.`);
+        }
+        
+        await uploadDocument(assessmentId, file);
+        
+        toast({
+          title: "Success",
+          description: `${file.name} uploaded successfully`
+        });
+      }
 
       // Refresh documents list
       await queryClient.invalidateQueries({
@@ -46,7 +57,7 @@ export function DocumentUpload({
       console.error('Upload error:', error);
       toast({
         title: "Error",
-        description: "Failed to upload document",
+        description: error instanceof Error ? error.message : "Failed to upload document",
         variant: "destructive"
       });
     } finally {
@@ -57,23 +68,32 @@ export function DocumentUpload({
   };
 
   const handleDownload = (doc: Document) => {
-    const [fileType, base64Data] = doc.data.split(',');
-    const byteCharacters = atob(base64Data);
-    const byteArray = new Uint8Array(byteCharacters.length);
-    
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteArray[i] = byteCharacters.charCodeAt(i);
+    try {
+      const [fileType, base64Data] = doc.data.split(',');
+      const byteCharacters = atob(base64Data);
+      const byteArray = new Uint8Array(byteCharacters.length);
+      
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteArray[i] = byteCharacters.charCodeAt(i);
+      }
+      
+      const blob = new Blob([byteArray]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download file",
+        variant: "destructive"
+      });
     }
-    
-    const blob = new Blob([byteArray]);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = doc.filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const handleDelete = async (docId: number) => {
@@ -120,13 +140,14 @@ export function DocumentUpload({
               onChange={handleFileUpload}
               disabled={isUploading}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              multiple
             />
             <Upload className="h-4 w-4 mr-2" />
-            {isUploading ? "Uploading..." : "Upload Document"}
+            {isUploading ? "Uploading..." : "Upload Documents"}
           </Button>
         </div>
         <p className="text-sm text-muted-foreground mt-2">
-          Upload evidence documents one at a time. All uploaded documents will be preserved.
+          Upload evidence documents. You can select multiple files at once.
         </p>
       </div>
 

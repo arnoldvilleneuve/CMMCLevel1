@@ -6,8 +6,16 @@ import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
   // Increase payload size limit for file uploads
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  app.use(express.json({ limit: '100mb' }));
+  app.use(express.urlencoded({ limit: '100mb', extended: true }));
+  
+  // Add CORS and other necessary middleware
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    next();
+  });
   app.get('/api/practices', async (req, res) => {
     try {
       const allPractices = await db.select().from(practices);
