@@ -73,7 +73,22 @@ export function registerRoutes(app: Express): Server {
       const { id } = req.params;
       const { filename, data } = req.body;
       
-      // Insert new document while preserving existing ones
+      if (!filename || !data) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      // Validate assessment exists
+      const assessment = await db
+        .select()
+        .from(assessments)
+        .where(eq(assessments.id, parseInt(id)))
+        .limit(1);
+
+      if (!assessment.length) {
+        return res.status(404).json({ error: 'Assessment not found' });
+      }
+
+      // Insert new document
       const result = await db
         .insert(documents)
         .values({
@@ -83,17 +98,46 @@ export function registerRoutes(app: Express): Server {
         })
         .returning();
       
-      // Return only necessary document info
       const doc = result[0];
       res.json({
         id: doc.id,
         assessmentId: doc.assessmentId,
         filename: doc.filename,
+        data: doc.data,
         createdAt: doc.createdAt
       });
     } catch (error) {
       console.error('Document upload error:', error);
       res.status(500).json({ error: 'Failed to upload document' });
+    }
+  });
+
+  app.delete('/api/assessments/:assessmentId/documents/:docId', async (req, res) => {
+    try {
+      const { assessmentId, docId } = req.params;
+      
+      // Verify document exists and belongs to the assessment
+      const document = await db
+        .select()
+        .from(documents)
+        .where(eq(documents.id, parseInt(docId)))
+        .where(eq(documents.assessmentId, parseInt(assessmentId)))
+        .limit(1);
+
+      if (!document.length) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
+
+      // Delete the document
+      await db
+        .delete(documents)
+        .where(eq(documents.id, parseInt(docId)))
+        .where(eq(documents.assessmentId, parseInt(assessmentId)));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Document deletion error:', error);
+      res.status(500).json({ error: 'Failed to delete document' });
     }
   });
 

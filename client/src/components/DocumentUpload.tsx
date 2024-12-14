@@ -3,14 +3,22 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { uploadDocument } from "@/lib/api";
+import { Download, Trash2, Upload } from "lucide-react";
 import type { Document } from "@/types/assessment";
 
 interface DocumentUploadProps {
   assessmentId: number;
+  documents: Document[];
+  isLoading: boolean;
   onUploadComplete?: () => void;
 }
 
-export function DocumentUpload({ assessmentId, onUploadComplete }: DocumentUploadProps) {
+export function DocumentUpload({ 
+  assessmentId, 
+  documents, 
+  isLoading,
+  onUploadComplete 
+}: DocumentUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -48,32 +56,124 @@ export function DocumentUpload({ assessmentId, onUploadComplete }: DocumentUploa
     }
   };
 
+  const handleDownload = (doc: Document) => {
+    const [fileType, base64Data] = doc.data.split(',');
+    const byteCharacters = atob(base64Data);
+    const byteArray = new Uint8Array(byteCharacters.length);
+    
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteArray[i] = byteCharacters.charCodeAt(i);
+    }
+    
+    const blob = new Blob([byteArray]);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = doc.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDelete = async (docId: number) => {
+    try {
+      const response = await fetch(`/api/assessments/${assessmentId}/documents/${docId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete document');
+      }
+
+      toast({
+        title: "Success",
+        description: "Document deleted successfully"
+      });
+
+      // Refresh documents list
+      await queryClient.invalidateQueries({
+        queryKey: ['documents', assessmentId]
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete document",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div>
-        <h4 className="text-sm font-medium mb-2">Upload Evidence Documents</h4>
+        <h4 className="text-sm font-medium mb-2">Evidence Documents</h4>
         <div className="flex items-center gap-4">
-          <input
-            type="file"
-            onChange={handleFileUpload}
+          <Button
+            variant="outline"
+            className="relative"
             disabled={isUploading}
-            className="block flex-1 text-sm text-gray-500
-              file:mr-4 file:py-2 file:px-4
-              file:rounded-md file:border-0
-              file:text-sm file:font-semibold
-              file:bg-primary file:text-primary-foreground
-              hover:file:bg-primary/90
-              disabled:opacity-50"
-          />
-          {isUploading && (
-            <div className="text-sm text-muted-foreground animate-pulse">
-              Uploading...
-            </div>
-          )}
+          >
+            <input
+              type="file"
+              onChange={handleFileUpload}
+              disabled={isUploading}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
+            <Upload className="h-4 w-4 mr-2" />
+            {isUploading ? "Uploading..." : "Upload Document"}
+          </Button>
         </div>
         <p className="text-sm text-muted-foreground mt-2">
           Upload evidence documents one at a time. All uploaded documents will be preserved.
         </p>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">Uploaded Documents</h4>
+          {isLoading && (
+            <span className="text-sm text-muted-foreground animate-pulse">
+              Loading...
+            </span>
+          )}
+        </div>
+
+        {documents.length > 0 ? (
+          <div className="space-y-2">
+            {documents.map((doc) => (
+              <div
+                key={doc.id}
+                className="flex items-center justify-between p-3 border rounded-md hover:bg-accent/50 transition-colors"
+              >
+                <span className="text-sm font-medium truncate max-w-[200px]">
+                  {doc.filename}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDownload(doc)}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(doc.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No documents uploaded yet.
+          </p>
+        )}
       </div>
     </div>
   );
