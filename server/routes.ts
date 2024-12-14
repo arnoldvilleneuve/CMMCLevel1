@@ -6,8 +6,19 @@ import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
   // Configure middleware for handling file uploads with proper limits
-  app.use(express.json({ limit: '100mb' }));
-  app.use(express.urlencoded({ limit: '100mb', extended: true }));
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  
+  // Add specific error handling for large files
+  app.use((err: any, req: any, res: any, next: any) => {
+    if (err instanceof SyntaxError && err.status === 413) {
+      return res.status(413).json({
+        error: 'File too large',
+        message: 'The uploaded file exceeds the maximum allowed size of 50MB.'
+      });
+    }
+    next(err);
+  });
   
   // Comprehensive error handling middleware
   app.use((err: any, req: any, res: any, next: any) => {

@@ -38,13 +38,14 @@ export function DocumentUpload({
     try {
       const fileArray = Array.from(files);
       
-      // Validate file sizes (10MB limit)
-      const oversizedFiles = fileArray.filter(file => file.size > 10 * 1024 * 1024);
+      // Validate file sizes (50MB limit)
+      const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+      const oversizedFiles = fileArray.filter(file => file.size > MAX_FILE_SIZE);
       if (oversizedFiles.length > 0) {
         throw new Error(
-          `The following files exceed the 10MB limit: ${oversizedFiles
+          `The following files exceed the 50MB limit: ${oversizedFiles
             .map(f => f.name)
-            .join(", ")}`
+            .join(", ")}. Maximum file size is 50MB.`
         );
       }
 
