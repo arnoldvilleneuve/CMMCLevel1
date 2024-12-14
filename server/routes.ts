@@ -6,12 +6,24 @@ import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
   // Configure middleware for handling large file uploads
-  app.use(express.json({ limit: '100kb' })); // Keep JSON payload small
+  // Configure middleware for handling uploads
+  app.use(express.json({ 
+    limit: '10mb',  // Increased for initialization payload
+    verify: (req, res, buf) => {
+      // Store raw body for processing
+      if (req.headers['content-type']?.includes('application/json')) {
+        (req as any).rawBody = buf;
+      }
+    }
+  }));
   app.use(express.raw({ 
     type: 'application/octet-stream',
-    limit: '5gb' // Allow large raw uploads for chunked data
+    limit: '6gb', // Slightly higher than max file size to handle overhead
+    verify: (req, res, buf) => {
+      (req as any).rawBody = buf;
+    }
   }));
-  app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   
   // Add specific error handling for large files
   app.use((err: any, req: any, res: any, next: any) => {
@@ -121,8 +133,24 @@ export function registerRoutes(app: Express): Server {
       const { id } = req.params;
       const { filename, totalSize, totalChunks } = req.body;
       
-      if (!filename || !totalSize || !totalChunks) {
-        return res.status(400).json({ error: 'Missing required fields' });
+      // Enhanced validation
+      if (!filename || typeof filename !== 'string') {
+        return res.status(400).json({ error: 'Invalid filename' });
+      }
+      if (!totalSize || typeof totalSize !== 'number' || totalSize <= 0) {
+        return res.status(400).json({ error: 'Invalid file size' });
+      }
+      if (!totalChunks || typeof totalChunks !== 'number' || totalChunks <= 0) {
+        return res.status(400).json({ error: 'Invalid chunk count' });
+      }
+      
+      // Validate file size
+      const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB in bytes
+      if (totalSize > MAX_FILE_SIZE) {
+        return res.status(400).json({ 
+          error: `File size exceeds maximum limit of 5GB`,
+          details: { maxSize: MAX_FILE_SIZE, receivedSize: totalSize }
+        });
       }
 
       const assessment = await db
@@ -151,7 +179,17 @@ export function registerRoutes(app: Express): Server {
       res.json(result[0]);
     } catch (error) {
       console.error('Document initialization error:', error);
-      res.status(500).json({ error: 'Failed to initialize document upload' });
+      if (error instanceof Error) {
+        res.status(500).json({ 
+          error: 'Failed to initialize document upload',
+          details: error.message
+        });
+      } else {
+        res.status(500).json({ 
+          error: 'Failed to initialize document upload',
+          details: 'Unknown error occurred'
+        });
+      }
     }
   });
 

@@ -264,7 +264,7 @@ export function DocumentUpload({
         ))}
 
         <p className="text-sm text-muted-foreground mt-2">
-          Supported formats: Images, PDF, Word, Excel, Text files (Max 10MB per file)
+          Supported formats: Images, PDF, Word, Excel, Text files (Max 5GB per file)
         </p>
       </div>
 
