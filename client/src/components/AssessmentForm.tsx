@@ -156,11 +156,12 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
                   htmlFor={`file-upload-${practice.id}`}
                   className="block text-sm font-medium mb-2"
                 >
-                  Upload Evidence Documents
+                  Upload Evidence Documents (Select multiple files)
                 </label>
                 <input
                   id={`file-upload-${practice.id}`}
                   type="file"
+                  multiple
                   className="block w-full text-sm text-gray-500
                     file:mr-4 file:py-2 file:px-4
                     file:rounded-md file:border-0
@@ -169,24 +170,28 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
                     hover:file:bg-primary/90"
                   disabled={isUploading}
                   onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file && currentAssessment?.id) {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length > 0 && currentAssessment?.id) {
                       try {
                         setIsUploading(true);
-                        await uploadDocument(currentAssessment.id, file);
+                        for (const file of files) {
+                          await uploadDocument(currentAssessment.id, file);
+                        }
                         toast({
-                          title: "Document uploaded",
-                          description: "Your evidence document has been uploaded successfully."
+                          title: "Documents uploaded",
+                          description: `Successfully uploaded ${files.length} document${files.length === 1 ? '' : 's'}.`
                         });
                         onSave();
                       } catch (error) {
                         toast({
                           title: "Error",
-                          description: "Failed to upload document.",
+                          description: "Failed to upload one or more documents.",
                           variant: "destructive"
                         });
                       } finally {
                         setIsUploading(false);
+                        // Reset the file input
+                        e.target.value = '';
                       }
                     }
                   }}
