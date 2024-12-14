@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ interface AssessmentFormProps {
 
 export default function AssessmentForm({ practice, currentAssessment, onSave }: AssessmentFormProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
 
   const { data: documents } = useQuery({
@@ -156,44 +157,49 @@ export default function AssessmentForm({ practice, currentAssessment, onSave }: 
                   htmlFor={`file-upload-${practice.id}`}
                   className="block text-sm font-medium mb-2"
                 >
-                  Upload Evidence Documents (Select multiple files)
+                  Upload Evidence Document
                 </label>
-                <input
-                  id={`file-upload-${practice.id}`}
-                  type="file"
-                  className="block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-md file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-primary file:text-primary-foreground
-                    hover:file:bg-primary/90"
-                  disabled={isUploading}
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file && currentAssessment?.id) {
-                      try {
-                        setIsUploading(true);
-                        await uploadDocument(currentAssessment.id, file);
-                        toast({
-                          title: "Document uploaded",
-                          description: "Successfully uploaded the document."
-                        });
-                        // Refresh the documents list
-                        onSave();
-                      } catch (error) {
-                        toast({
-                          title: "Error",
-                          description: "Failed to upload the document.",
-                          variant: "destructive"
-                        });
-                      } finally {
-                        setIsUploading(false);
-                        // Reset the file input
-                        e.target.value = '';
+                <div className="space-y-4">
+                  <input
+                    id={`file-upload-${practice.id}`}
+                    type="file"
+                    className="block w-full text-sm text-gray-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-md file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-primary file:text-primary-foreground
+                      hover:file:bg-primary/90"
+                    disabled={isUploading}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file && currentAssessment?.id) {
+                        try {
+                          setIsUploading(true);
+                          await uploadDocument(currentAssessment.id, file);
+                          toast({
+                            title: "Document uploaded",
+                            description: `Successfully uploaded ${file.name}`
+                          });
+                          // Invalidate and refetch documents query
+                          await queryClient.invalidateQueries(['/api/documents', currentAssessment.id]);
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to upload the document.",
+                            variant: "destructive"
+                          });
+                        } finally {
+                          setIsUploading(false);
+                          // Reset the file input
+                          e.target.value = '';
+                        }
                       }
-                    }
-                  }}
-                />
+                    }}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Upload additional evidence documents one at a time. All uploaded documents will be preserved.
+                  </p>
+                </div>
               </div>
               
               {currentAssessment?.id && documents && documents.length > 0 && (
